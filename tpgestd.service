@@ -1,0 +1,18 @@
+[Unit]
+Description=3/4-finger touchpad gesture daemon (Xorg)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/tpgestd
+Restart=on-failure
+RestartSec=2
+Nice=10
+IOSchedulingClass=idle
+# Keep it off the audio/perf-critical path; this process is asleep
+# almost all the time anyway (blocking poll()), so cgroup limits are
+# just extra insurance, not a real cost saver.
+CPUWeight=10
+
+[Install]
+WantedBy=graphical-session.target

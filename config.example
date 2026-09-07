@@ -1,0 +1,23 @@
+# tpgestd config
+# syntax:  <swipe|pinch>  <3|4>  <direction>  =  <shell command>
+#   swipe directions: up down left right
+#   pinch directions: in out
+#
+# Edit and copy to ~/.config/tpgestd/config
+# Commands run via `sh -c`, async, non-blocking.
+
+# --- 3-finger: workspace / window switching ---
+swipe 3 left  = wmctrl -s -1
+swipe 3 right = wmctrl -s +1
+swipe 3 up    = xdotool key super
+swipe 3 down  = xdotool key super+d
+
+# --- 4-finger: app-level actions ---
+swipe 4 left  = xdotool key alt+Right
+swipe 4 right = xdotool key alt+Left
+swipe 4 up    = xdotool getactivewindow windowmaximize
+swipe 4 down  = xdotool getactivewindow windowminimize
+
+# --- pinch: zoom ---
+pinch 3 in    = xdotool key ctrl+minus
+pinch 3 out   = xdotool key ctrl+plus
