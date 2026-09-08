@@ -185,8 +185,13 @@ static void handle_swipe(struct libinput_event *ev, enum libinput_event_type t) 
         acc_dx = acc_dy = 0;
         active_fingers = libinput_event_gesture_get_finger_count(g);
     } else if (t == LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE) {
-        acc_dx += libinput_event_gesture_get_dx(g);
-        acc_dy += libinput_event_gesture_get_dy(g);
+        /* Use *unaccelerated* deltas, not libinput's pointer-accelerated
+         * dx/dy. The acceleration curve is tuned for cursor movement,
+         * not gesture thresholds, so raw motion tracks your actual
+         * finger travel more faithfully (this is the one thing worth
+         * borrowing from gebaar-libinput's approach). */
+        acc_dx += libinput_event_gesture_get_dx_unaccelerated(g);
+        acc_dy += libinput_event_gesture_get_dy_unaccelerated(g);
     } else if (t == LIBINPUT_EVENT_GESTURE_SWIPE_END) {
         if (active_fingers == 3 || active_fingers == 4) {
             double adx = fabs(acc_dx), ady = fabs(acc_dy);
