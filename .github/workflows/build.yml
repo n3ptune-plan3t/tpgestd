@@ -3,7 +3,7 @@ name: build-and-release
 on:
   push:
     branches: [main, master]
-    tags: ["v*.*.*"]
+    tags: ["v*"]   # matches v1, v1.0, v1.0.0, v1.0.0-rc1, etc. — anything starting with v
   pull_request:
     branches: [main, master]
 
@@ -48,7 +48,7 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.build.result == 'success' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifact
