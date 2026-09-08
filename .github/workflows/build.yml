@@ -1,59 +1,65 @@
-name: Build
+name: build-and-release
 
 on:
   push:
-    branches: [ "main", "master" ]
-    tags:
-      - "v*"
+    branches: [main, master]
+    tags: ["v*.*.*"]
   pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch: {}
+    branches: [main, master]
 
 permissions:
-  contents: write   # needed to create/upload releases
+  contents: write   # needed to create releases + upload assets
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Install build deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config libinput-dev libudev-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libinput-dev libudev-dev pkg-config
 
-      - name: Build tpgestd
+      - name: Build
         run: |
-          gcc -O2 -o tpgestd tpgestd.c $(pkg-config --cflags --libs libinput libudev)
+          gcc -Wall -O2 -o tpgestd tpgestd.c $(pkg-config --cflags --libs libinput libudev)
+          strip tpgestd
 
-      - name: Smoke-check binary
+      - name: Smoke test (binary runs, links resolve)
         run: |
-          file ./tpgestd
-          ldd ./tpgestd || true
+          ldd ./tpgestd
+          ./tpgestd -h
+
+      - name: Package release archive
+        run: |
+          mkdir -p dist/tpgestd
+          cp tpgestd README.md config.example tpgestd.service dist/tpgestd/
+          tar -C dist -czf tpgestd-linux-x86_64.tar.gz tpgestd
+          sha256sum tpgestd-linux-x86_64.tar.gz > tpgestd-linux-x86_64.tar.gz.sha256
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: tpgestd-linux-x86_64
-          path: tpgestd
-          if-no-files-found: error
+          path: |
+            tpgestd-linux-x86_64.tar.gz
+            tpgestd-linux-x86_64.tar.gz.sha256
 
-      - name: Package release asset
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          mkdir -p dist
-          cp tpgestd dist/
-          cp README.md config.example tpgestd.service dist/ 2>/dev/null || true
-          tar -C dist -czf tpgestd-${{ github.ref_name }}-linux-x86_64.tar.gz .
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tpgestd-linux-x86_64
 
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            tpgestd
-            tpgestd-${{ github.ref_name }}-linux-x86_64.tar.gz
+            tpgestd-linux-x86_64.tar.gz
+            tpgestd-linux-x86_64.tar.gz.sha256
           generate_release_notes: true
